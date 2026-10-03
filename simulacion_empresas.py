@@ -50,8 +50,36 @@ tabla_ordenada_empresas=pd.DataFrame(generar_datos())
 #6. probar la funcion
 print(tabla_ordenada_empresas)
 
-      
-        
+#7. Preparar la simulacion para ensuciar mis datos
+
+#7.1 Funcion para obtener una muestra de los datos
+def obtener_muestra(datos,porcentaje):
+    return datos.sample(fraccion=porcentaje,random_state=random.randint(0,9999)).index
+
+#7.2 Funcion auxiliar para cambiar valores de un texto
+def escribir_mal():
+    variantes=[texto.lower(),texto.title(),texto.capitalize(),f" {texto} ","Juan Jose"]
+    return random.choice(variantes)
+
+#7.3 Funcion Auxiliar para cambiar los booleanos
+def convertir_booleano(valor):
+    if valor:
+        return random.choice(["SI","1"])    
+    else:
+        return random.choice(["NO","0"])
+
+#7.4 Funcion para ensuciar los datos simulados
+def ensuciar(datos_df):
+    datos_df=datos_df.copy()
+
+    #Nombre: el 10% tenga espacios y el 15% este en mayuscula
+    filas_elegidas=obtener_muestra(datos_df,0.1)
+    datos_df.loc[filas_elegidas,"nombre"]=" "+datos_df.loc[filas_elegidas,"nombre"]+""
+
+    filas_elegidas=obtener_muestra(datos_df,0.15)
+    datos_df.loc[filas_elegidas,"nombre"]=datos_df.loc[filas_elegidas,"nombre"].str.upper()
+
+    
 
 
 
