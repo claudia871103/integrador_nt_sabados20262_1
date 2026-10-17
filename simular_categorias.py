@@ -1,30 +1,23 @@
-'''
-Clasifica tematicamente los retos. Crea el script `src/simular_categorias.py`. Con la libreria **Faker** genera 250 filas falsas de la tabla `categorias`, con las MISMAS columnas que usa Backend II. Despues **ensucia los datos a proposito**: nulos, duplicados, espacios sobrantes, mayusculas mezcladas y formatos distintos. Esos errores son los que vas a arreglar en la etapa de limpieza, asi que tienen que quedar bien puestos.
-Usa `Faker("es_CO")` y fija la semilla con `Faker.seed(42)` y `random.seed(42)` para que el resultado sea SIEMPRE el mismo y tu compañero pueda reproducirlo.
-OJO: `area_responsable` NO esta en el modelo de Backend II: es una columna EXTRA solo para este ejercicio de analisis, para poder agrupar. Dejala anotada como tal en el script.'''
-
-import random 
+import random
 import uuid
 import pandas as pd
 from faker import Faker
 
-#1. Sembrar semillas para los datos a simular
-random.seed(42)
-Faker.seed(42)
-
-#2. IdentiFicar los datos a simular con su tipo de dato
-#id (texto (UUID)), 
-#nombre (texto), 
-#descripcion (texto), 
-#area_responsable (texto): columna extra para el ejercicio de analisis.
-
-#3. ESTABLECER UNA CONSTANTE PARA EL NUEMROD E SIMULACIONS
+#1. Establecer las constantes para los datos a simular
+CATEGORIAS=[
+    "Logística", "Tecnología", "Educación", "Medio ambiente", "Salud",
+    "Emprendimiento", "Cultura", "Deporte", "Turismo", "Agricultura"
+]
+AREAS=["financiera", "mejora", "innovacion", "proyectos"]
 FILAS=250
-CATEGORIAS=["tecnologia", "educacion", "medio ambiente", "salud", "emprendimiento"]
-AREAS=["financiera", "mejora", "innovacion", "proyectos" ]
 FALSITO = Faker("es_CO")
 
-#4. Funcion generadora
+#2. Identificar los datos a simular con su tipo de dato
+#id (texto (UUID)), nombre (texto), descripcion (texto).
+#area_responsable (texto): columna EXTRA para el ejercicio de analisis;
+#no pertenece al modelo de Backend II.
+
+#3. Funcion generadora de los datos ordenados
 def generar_datos(numero_filas=FILAS):
     categorias = []
     for _ in range(numero_filas):
@@ -36,65 +29,59 @@ def generar_datos(numero_filas=FILAS):
         })
     return categorias
 
-#5. Convirtiendo los datos generados en un dataframe con PANDAS
-tabla_ordenada_categorias=pd.DataFrame(generar_datos())
-
-#6. Probar la funcion
-print(tabla_ordenada_categorias)
-
-#7. Preparar la simulacion para ensuciar mis datos
-
-#7.1 Funcion para obtener una muestra de los datos 
+#4. Funcion para obtener una muestra de los datos
 def obtener_muestra(datos,porcentaje):
     return datos.sample(frac=porcentaje, random_state=random.randint(0,9999)).index
 
-
-#7.2 Funciona auxiliar para cambiar valores de un texto 
-def escribir_mal (texto):
-    variantes=[texto.lower(),texto.title(),texto.capitalize(),f"{texto} ",f" {texto}",f" {texto} ", "Juan Jose"]
+#5. Funcion auxiliar para cambiar la escritura del mismo nombre
+def escribir_mal(texto):
+    variantes=[texto.title(), texto.upper(), texto.lower(), f" {texto.lower()} "]
     return random.choice(variantes)
 
-#7.3 Funcion auxiliar para cambiar los booleanos 
-def convertir_booleano(valor):
-    if valor:
-        return random.choice(["SI","1"])  
-    else:
-        return random.choice(["NO","0"])
-
-#7.4 Funciona principal para ensuciar los datos simulados
+#6. Funcion principal para ensuciar los datos simulados
 def ensuciar(datos_df):
     datos_df=datos_df.copy()
 
-    #Nombre: el 10% tenga espacios y 8% este en mayuscula
-    filas_elegidas=obtener_muestra(datos_df,0.10)
-    datos_df.loc[filas_elegidas,"nombre"]=" "+datos_df.loc[filas_elegidas,"nombre"]+" "
+    #Nombre: variantes del mismo nombre, sin agregar categorias nuevas
+    datos_df["nombre"]=datos_df["nombre"].map(escribir_mal)
 
-    filas_elegidas=obtener_muestra(datos_df,0.08)
-    datos_df.loc[filas_elegidas,"nombre"]=datos_df.loc[filas_elegidas,"nombre"].str.upper()
-
-    #Correo: el 5% de los datos esté sin @
-    filas_elegidas=obtener_muestra(datos_df,0.05)
-    datos_df.loc[filas_elegidas,"correo"]=datos_df.loc[filas_elegidas,"correo"].str.replace("@","")
-
-    #Correo: el 4% de los correos no debería tener nungun valor (None)
-    filas_elegidas=obtener_muestra(datos_df,0.04)
-    datos_df.loc[filas_elegidas,"correo"]=None
-
-    #Rol: Aplicar errores de escritura (variantes)
-    filas_elegidas=obtener_muestra(datos_df,0.10)
-    datos_df.loc[filas_elegidas,"rol"]=datos_df.loc[filas_elegidas,"rol"].map(escribir_mal)
-
-    #Activo: En ocasiones llega SI, NO, 1, 0
-    datos_df["activo"]=datos_df["activo"].astype(object)
+    #Descripcion: 15% de los valores en None
     filas_elegidas=obtener_muestra(datos_df,0.15)
-    datos_df.loc[filas_elegidas,"activo"]=datos_df.loc[filas_elegidas,"activo"].map(convertir_booleano)
+    datos_df.loc[filas_elegidas,"descripcion"]=None
 
-    #Mezclar el formato de la fecha
-    #ISO => 2026-10-03 YYYY-mm-dd HH:MM:SS
-    #LATINO => d/m/y
-    iso=datos_df["fecha_registro"].dt.strftime("%Y-%m-%d %H:%M:%S")
-    latino=datos_df["fecha_registro"].dt.strftime("%d/%m/%y %H:%M")
-    datos_df["fecha_registro"]=iso
-    filas_elegidas=obtener_muestra(datos_df,0.25)
-    datos_df.loc[filas_elegidas,"fecha_registro"]=latino.loc[filas_elegidas]
-    
+    #Area responsable: 10% de los valores en None
+    filas_elegidas=obtener_muestra(datos_df,0.10)
+    datos_df.loc[filas_elegidas,"area_responsable"]=None
+
+    #Duplicar el 8% de las filas completas, incluido el id.
+    #Reemplazar filas completas conserva el total y los porcentajes de nulos.
+    cantidad_duplicados=round(len(datos_df)*0.08)
+    filas_completas=datos_df.dropna()
+    if cantidad_duplicados:
+        filas_elegidas=filas_completas.sample(
+            n=cantidad_duplicados+1, random_state=random.randint(0,9999)
+        ).index
+        fila_original=datos_df.loc[filas_elegidas[0]].copy()
+        for indice in filas_elegidas[1:]:
+            datos_df.loc[indice]=fila_original
+
+    return datos_df
+
+#7. Generar y devolver el DataFrame para el script de exportacion
+def generar_categorias(n=250):
+    #Reiniciar las semillas permite reproducir los datos en cada llamada.
+    #uuid.uuid4() usa aleatoriedad del sistema: los UUID cambian entre llamadas.
+    Faker.seed(42)
+    random.seed(42)
+    df=pd.DataFrame(
+        generar_datos(n), columns=["id", "nombre", "descripcion", "area_responsable"]
+    )
+    df=ensuciar(df)
+    return df
+
+#8. Revisar los datos sucios solo al ejecutar este archivo
+if __name__ == "__main__":
+    df=generar_categorias()
+    print(df.shape)
+    print(df.head())
+    print(df.isna().sum())
